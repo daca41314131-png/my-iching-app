@@ -51,7 +51,6 @@ class DigitalIChingPro:
         results, total_score, i = [], 60, 0
         counts = {"Wealth": 0, "Noble": 0, "Career": 0}
         if len(nums) < 2: return results, total_score, counts
-
         while i < len(nums) - 1:
             current = nums[i]
             if current in '05': i += 1; continue
@@ -82,20 +81,16 @@ class DigitalIChingPro:
         random.seed(original_nums)
         target_len = max(8, len(original_nums))
         if target_len > 12: target_len = 12
-        
         pool_wealth = ["13", "31", "68", "86", "49", "94"]
         pool_noble = ["14", "41", "67", "76", "39", "93"]
         pool_career = ["19", "91", "78", "87", "34", "43"]
-        
         min_energy = min(star_counts, key=star_counts.get)
         reason = "加強財庫天醫磁場" if min_energy == "Wealth" else ("啟動貴人生氣磁場" if min_energy == "Noble" else "固守事業延年磁場")
         primary_pool = pool_wealth if min_energy == "Wealth" else (pool_noble if min_energy == "Noble" else pool_career)
-            
         remedy_code = ""
         while len(remedy_code) < target_len:
             pool = primary_pool if random.random() < 0.7 else (pool_wealth + pool_noble + pool_career)
             remedy_code += random.choice(pool)
-        
         remedy_code = remedy_code[:target_len]
         remedy_details, _, _ = self.analyze(remedy_code)
         return remedy_code, round(96.5 + (random.random() * 3.3), 1), remedy_details, reason
@@ -104,16 +99,23 @@ class DigitalIChingPro:
 st.set_page_config(page_title="數位易經鑑定所", page_icon="🔮")
 t = LANGUAGES["繁體中文"]
 
-# 初始化已支付列表
+# 用於儲存本對話 session 中已付費的號碼
 if "paid_numbers" not in st.session_state:
     st.session_state.paid_numbers = set()
 
-# 側邊欄：輸入區
+# 側邊欄設定
 st.sidebar.header("📝 鑑定資料填寫")
 selected_type = st.sidebar.selectbox("選擇類型", t["type_options"])
 raw_input = st.sidebar.text_input(t["input_label"], placeholder="請輸入...")
 
-# 檢查支付狀態：若 URL 有 pay=success 且有號碼，將該號碼加入已支付
+# --- 管理者權限設定 ---
+st.sidebar.divider()
+admin_key = st.sidebar.text_input("🔑 管理者密鑰 (解鎖用)", type="password")
+
+# 這裡設定兩個管理者的獨立密碼
+ADMIN_PASSWORDS = ["@Daca4131911", "kayhsu1014"] 
+
+# 檢查 PayPal 支付成功跳轉
 if st.query_params.get("pay") == "success" and raw_input:
     st.session_state.paid_numbers.add(raw_input)
 
@@ -123,18 +125,14 @@ if raw_input:
     engine = DigitalIChingPro()
     clean_nums = engine.convert_to_nums(raw_input)
     details, score, star_counts = engine.analyze(clean_nums)
-    
-    # 判斷當前號碼是否已付費
     is_current_paid = raw_input in st.session_state.paid_numbers
     
     if is_current_paid:
         st.success(t["paid_success"])
         st.subheader(t["master_voice_title"])
         st.write(f"> 「信士您好，觀您所測之{selected_type} `{raw_input}`，其能量與您息息相關。」")
-        
         st.metric(t["score_label"], f"{score} 分")
         
-        # 評語邏輯
         if score < 60: st.error("❗ 此號碼凶星壓制，易致事倍功半、波折重重。")
         elif score < 85: st.warning("⚠️ 能量尚屬平穩，然吉星微弱，仍有提升空間。")
         else: st.success("🌟 此乃上乘之數！正磁場環繞，貴人相助，利於發展。")
@@ -144,13 +142,10 @@ if raw_input:
                 df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
                 st.table(df_orig)
         
-        # --- 化解方案 ---
         st.divider()
         st.subheader(t["solution_title"])
         remedy_code, r_score, r_details, reason = engine.generate_remedy(clean_nums, star_counts)
-        
         st.write(f"**為何需要此方案？**\n大師觀測您原號碼中 **{reason}** 之氣不足，故演算此對沖陣法補強。")
-        
         c1, c2 = st.columns(2)
         c1.info(f"{t['remedy_code']}\n### **{remedy_code}**")
         c2.success(f"{t['remedy_score']}\n### **{r_score}**")
@@ -161,23 +156,23 @@ if raw_input:
             st.table(df_rem)
 
         if st.sidebar.button("🔄 鑑定下一個新號碼"):
-            # 清除當前 URL 參數，強制重新支付檢查
             st.query_params.clear()
             st.rerun()
-
     else:
-        # 付費牆：每個號碼獨立觸發
         st.warning(t["lock_msg"])
         st.info(f"📍 **{selected_type}：{raw_input}** 的鑑定數據已演算完畢。")
         st.write(t["unlock_benefit"])
-        
-        # PayPal 按鈕
         st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
-        st.divider()
-        if st.sidebar.button("🛠️ 測試模式：解鎖當前號碼"):
-            st.session_state.paid_numbers.add(raw_input)
-            st.rerun()
+        # --- 管理者權限檢查邏輯 ---
+        if admin_key in ADMIN_PASSWORDS:
+            st.sidebar.success("✅ 管理者身分確認")
+            if st.sidebar.button("🛠️ 權限解鎖：當前號碼"):
+                st.session_state.paid_numbers.add(raw_input)
+                st.rerun()
+        elif admin_key != "":
+            st.sidebar.error("❌ 密鑰無效")
+
 else:
     st.info("👈 請於左側選單輸入您想鑑定的號碼、生日或車牌。")
 
