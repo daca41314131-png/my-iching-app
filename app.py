@@ -5,27 +5,24 @@ import random
 import pandas as pd
 from datetime import datetime, timedelta
 
-# --- 1. 多國語言與介面文字 ---
-LANGUAGES = {
-    "繁體中文": {
-        "title": "🔮 數位易經能量鑑定所",
-        "input_label": "請輸入欲鑑定之數字組合：",
-        "type_options": ["手機號碼", "身分證字號", "LINE ID", "出生日期 (YYYYMMDD)", "車牌號碼"],
-        "score_label": "原始磁場總評分",
-        "lock_msg": "🔒 鑑定報告已被封印",
-        "unlock_benefit": "此號碼尚未解鎖，支付 1 USD 即可查閱：\n- 專屬八星吉凶詳細鑑定\n- 15分鐘內無限次重複查看\n- **命理師專屬化解建議與調和碼報表**",
-        "pay_btn": "💳 支付 1 USD 解鎖此號碼",
-        "paid_success": "✅ 緣分已至，報告已開啟 (有效期：15分鐘)",
-        "detail_table": "📊 原始磁場分佈解析",
-        "master_voice_title": "📜 命理師的叮嚀",
-        "solution_title": "🛠️ 專屬能量調和方案",
-        "remedy_code": "✨ 建議開運化解碼：",
-        "remedy_score": "📈 化解後預期能級：",
-        "remedy_table": "📋 化解碼磁場佈局報表",
-        "footer": "命理分析僅供參考，心誠則靈，好運自來。",
-        "col_section": "區段", "col_star": "星號", "col_score": "分數"
-    }
-}
+# --- 1. 命理師長篇大論庫 (隨機組合用) ---
+REASON_TEMPLATES = [
+    "信士可知，數字乃宇宙萬物能量之體現。您原始號碼中蘊含的氣場，如同先天之命，雖有定數，卻非不可改之侷限。目前的能量分佈顯示，某些負向磁場（如五鬼、絕命）正潛移默化地干擾您的氣運，就像是一條清澈的河流被亂石阻塞，導致財氣不聚、元神渙散。",
+    "在數位易經的觀點中，每一個號碼都是一個微型能量場。您目前的組合中，正能量吉星與負能量凶星比例失衡。這不代表您運勢不好，而是代表您的『共振頻率』偏離了繁榮的軌道。這就好比一個人穿了不合腳的鞋，走得再快也會感到疲憊，甚至受傷。",
+    "觀此號碼之相，磁場中顯現出一股駁雜之氣。在流年更迭中，若不加以調和，容易導致貴人遠去、小人近身。數字的磁場是全天候跟隨您的，若能透過特定的數字組合進行補強，便能在無形中形成一個守護屏障，轉化那些不穩定的人際或財富波動。"
+]
+
+METHOD_TEMPLATES = [
+    "大師為您演算的這組『專屬能量調和碼』，乃是根據您當下的氣場感應，運用『同頻對沖』與『陰陽補位』之法精確計算而成。這並非要您勞師動眾更換門號，而是透過『後天補運』的方式，將這組具備高度正向能量的數字，嵌入您的日常生活之中。",
+    "此調和方案的核心，在於『以吉化凶』。透過這組精選的吉星組合（如天醫財富、生氣貴人），我們能為您枯竭的能量池注入活水。這就像是醫者配藥，針對您磁場中的空缺進行標靶式的填充，讓原本凝滯的運勢重新流轉，化解凶星帶來的煞氣。",
+    "這組數字的排列順序，暗合易經八卦之變。我將其設定為您的『開運密碼』，其原理在於每日的『重複共振』。當您頻繁輸入、看到這組數字時，您的大腦與磁場會逐漸與這些高頻能量同步，從而達成轉運、招財、避邪的效果。"
+]
+
+ADVICE_TEMPLATES = [
+    "【使用建議】：請將此調和碼設置為您的手機解鎖密碼、提款卡密碼，或作為社交軟體的暱稱後綴。每日至少『觀想』或『觸碰』此組數字 21 次，持續七七四十九日，您必能體會到氣運翻轉的奇妙變化。心誠則靈，好運自來。",
+    "【大師叮嚀】：此碼乃當下機緣所得，靈力最強。建議將其書寫於紅紙上，放置於皮夾內，或設為電腦桌布。這組數字將成為您的能量錨點，當您感到疲憊或猶豫時，注視這組碼，能助您重新匯聚正磁場。莫疑、莫慮，能量自會運作。",
+    "【開運法門】：數字調和後，亦需配合行善積德。建議您在使用此調和碼的期間，多行布施，這能加速能量的顯化。此碼就像是一個放大器，您的善念越強，它回饋給您的財富與貴人能量就越龐大。"
+]
 
 # --- 2. 核心邏輯類別 ---
 class DigitalIChingPro:
@@ -79,106 +76,101 @@ class DigitalIChingPro:
         return "平穩磁場", 0
 
     def generate_remedy(self, original_nums, star_counts):
-        random.seed(original_nums)
+        # 移除 random.seed(original_nums) 確保每次答案不同
         target_len = max(8, len(original_nums))
         if target_len > 12: target_len = 12
+        
         pool_wealth = ["13", "31", "68", "86", "49", "94"]
         pool_noble = ["14", "41", "67", "76", "39", "93"]
         pool_career = ["19", "91", "78", "87", "34", "43"]
+        
+        # 根據弱項動態調整生成比例，但保持隨機性
         min_energy = min(star_counts, key=star_counts.get)
-        reason = "加強財庫天醫磁場" if min_energy == "Wealth" else ("啟動貴人生氣磁場" if min_energy == "Noble" else "固守事業延年磁場")
         primary_pool = pool_wealth if min_energy == "Wealth" else (pool_noble if min_energy == "Noble" else pool_career)
+            
         remedy_code = ""
         while len(remedy_code) < target_len:
-            pool = primary_pool if random.random() < 0.7 else (pool_wealth + pool_noble + pool_career)
+            pool = primary_pool if random.random() < 0.6 else (pool_wealth + pool_noble + pool_career)
             remedy_code += random.choice(pool)
+        
         remedy_code = remedy_code[:target_len]
         remedy_details, _, _ = self.analyze(remedy_code)
-        return remedy_code, round(96.5 + (random.random() * 3.3), 1), remedy_details, reason
+        
+        # 隨機組合成一段長篇大論
+        long_explanation = f"{random.choice(REASON_TEMPLATES)}\n\n{random.choice(METHOD_TEMPLATES)}\n\n{random.choice(ADVICE_TEMPLATES)}"
+        
+        return remedy_code, round(96.5 + (random.random() * 3.3), 1), remedy_details, long_explanation
 
-# --- 3. 網頁介面實作 ---
+# --- 3. 網頁介面 ---
 st.set_page_config(page_title="數位易經鑑定所", page_icon="🔮")
-t = LANGUAGES["繁體中文"]
 
-# 使用字典存儲：{ "號碼": 支付時間物件 }
 if "paid_history" not in st.session_state:
     st.session_state.paid_history = {}
 
-# 側邊欄設定
 st.sidebar.header("📝 鑑定資料填寫")
-selected_type = st.sidebar.selectbox("選擇類型", t["type_options"])
-raw_input = st.sidebar.text_input(t["input_label"], placeholder="請輸入...")
+selected_type = st.sidebar.selectbox("選擇類型", ["手機號碼", "身分證字號", "LINE ID", "出生日期", "車牌號碼"])
+raw_input = st.sidebar.text_input("請輸入欲鑑定之號碼：", placeholder="例如：0912345678")
 
-# 管理者設定
 st.sidebar.divider()
 admin_key = st.sidebar.text_input("🔑 管理者密鑰", type="password")
-ADMIN_PASSWORDS = ["master888", "admin999"] 
+ADMIN_PASSWORDS = ["@Daca4131911", "kayhsu1014"] 
 
-# 檢查支付成功跳轉 (模擬成功)
+# 檢查支付成功 (模擬)
 if st.query_params.get("pay") == "success" and raw_input:
-    # 紀錄支付時間為當前
     st.session_state.paid_history[raw_input] = datetime.now()
 
-st.title(t["title"])
+st.title("🔮 數位易經能量鑑定所")
 
 if raw_input:
     engine = DigitalIChingPro()
     clean_nums = engine.convert_to_nums(raw_input)
     details, score, star_counts = engine.analyze(clean_nums)
     
-    # --- 關鍵：15分鐘時間檢查邏輯 ---
+    # 15 分鐘計費邏輯
     is_current_paid = False
     if raw_input in st.session_state.paid_history:
-        pay_time = st.session_state.paid_history[raw_input]
-        # 如果當前時間與支付時間差距小於 15 分鐘
-        if datetime.now() - pay_time < timedelta(minutes=15):
+        if datetime.now() - st.session_state.paid_history[raw_input] < timedelta(minutes=15):
             is_current_paid = True
-            remaining_time = 15 - (datetime.now() - pay_time).seconds // 60
         else:
-            # 已過期，從歷史紀錄移除
             del st.session_state.paid_history[raw_input]
     
     if is_current_paid:
-        st.success(f"{t['paid_success']} - 剩餘免費時間：約 {remaining_time} 分鐘")
-        st.subheader(t["master_voice_title"])
-        st.write(f"> 「信士您好，觀您所測之{selected_type} `{raw_input}`，其能量與您氣運息息相關。」")
-        st.metric(t["score_label"], f"{score} 分")
+        st.success("✅ 緣分已至，報告已開啟（15分鐘內可重複查閱，答案隨機流轉）")
+        st.subheader("📜 命理師的叮嚀")
+        st.write(f"> 「信士您好，觀您所測之{selected_type} `{raw_input}`，其能量正在隨天地運轉。」")
+        st.metric("原始磁場評分", f"{score} 分")
         
-        with st.expander(t["detail_table"], expanded=True):
-            if details:
-                df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-                st.table(df_orig)
+        with st.expander("📊 原始磁場詳細解析", expanded=True):
+            st.table(pd.DataFrame(details).rename(columns={"Section": "區段", "Star": "星號", "Score": "分數"}))
+        
+        # --- 每次點開/刷新都不同的化解方案 ---
+        st.divider()
+        st.subheader("🛠️ 專屬能量調和方案（大師親批）")
+        remedy_code, r_score, r_details, explanation = engine.generate_remedy(clean_nums, star_counts)
+        
+        # 顯示長篇解說
+        st.markdown(f"### **【為何需要此數字化解？】**")
+        st.write(explanation)
         
         st.divider()
-        st.subheader(t["solution_title"])
-        remedy_code, r_score, r_details, reason = engine.generate_remedy(clean_nums, star_counts)
-        st.write(f"**為何需要此方案？**\n大師觀測您原號碼中 **{reason}** 之氣不足，故演算此對沖陣法補強。")
-        c1, c2 = st.columns(2)
-        c1.info(f"{t['remedy_code']}\n### **{remedy_code}**")
-        c2.success(f"{t['remedy_score']}\n### **{r_score}**")
+        col1, col2 = st.columns(2)
+        col1.info(f"✨ 建議開運化解碼：\n### **{remedy_code}**")
+        col2.success(f"📈 化解後預期能級：\n### **{r_score}**")
         
-        st.markdown(f"#### {t['remedy_table']}")
-        if r_details:
-            df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-            st.table(df_rem)
+        st.markdown("#### 📋 化解碼磁場佈局報表")
+        st.table(pd.DataFrame(r_details).rename(columns={"Section": "區段", "Star": "星號", "Score": "分數"}))
+        
+        if st.sidebar.button("🔄 刷新隨機化解方案"):
+            st.rerun()
 
     else:
-        # 未付費或已過期
-        st.warning(t["lock_msg"])
+        st.warning("🔒 鑑定報告已被封印")
         st.info(f"📍 **{selected_type}：{raw_input}** 的鑑定數據已演算完畢。")
-        st.write(t["unlock_benefit"])
-        st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
+        st.link_button("💳 支付 1 USD 解鎖鑑定與化解方案", "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
-        # 管理者解鎖
         if admin_key in ADMIN_PASSWORDS:
-            st.sidebar.success("✅ 管理者身分確認")
-            if st.sidebar.button("🛠️ 權限解鎖 (15min)"):
+            if st.sidebar.button("🛠️ 管理者解鎖 (15min)"):
                 st.session_state.paid_history[raw_input] = datetime.now()
                 st.rerun()
-        elif admin_key != "":
-            st.sidebar.error("❌ 密鑰無效")
-
 else:
-    st.info("👈 請於左側選單輸入您想鑑定的號碼、生日或車牌。")
-
-st.caption(t["footer"])
+    st.info("👈 請於左側選單輸入您想鑑定的號碼，開啟命運之門。")
