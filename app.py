@@ -134,6 +134,6 @@ if raw_input:
     else:
         st.warning("🔒 鑑定報告已被封印")
         st.info(f"📍 **{selected_type}：{raw_input}** 的數據已演算完畢，請解鎖查閱詳細大師報告。")
-        st.link_button("💳 支付 1 USD 解鎖鑑定與化解方案", "https://paypal.me/yourlink")
+        st.link_button("💳 支付 1 USD 解鎖鑑定與化解方案", "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
 else:
     st.info("👈 請於左側選單輸入您的號碼，開啟命運之門。")
