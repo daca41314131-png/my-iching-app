@@ -8,38 +8,34 @@ import pandas as pd
 LANGUAGES = {
     "繁體中文": {
         "title": "🔮 數字易經能量分析 (專業版)",
-        "input_label": "請輸入欲分析的號碼 (手機或身分證)：",
+        "input_label": "請輸入號碼 (支援字母，如身分證、LINE ID)：",
         "score_label": "能量總評分",
         "lock_msg": "🔒 分析報告已鎖定",
-        "unlock_benefit": "為了保護您的隱私與提供最精準的深度解析，請支付後查看：\n- 能量總評分 (吉凶鑑定)\n- 逐段數字磁場解析 (八星明細)\n- 專屬化解方案與對比報表",
+        "unlock_benefit": "支付後即可查看：\n- 字母轉譯數據與能量評分\n- 逐段數字磁場解析 (八星明細)\n- 專屬化解方案與對比報表",
         "pay_btn": "💳 支付 1 USD 解鎖完整報告",
-        "paid_success": "✅ 付款成功！已為您解鎖完整分析報告",
-        "detail_table": "📊 原始號碼磁場分佈表",
-        "advice_title": "💡 深度解析建議",
+        "paid_success": "✅ 付款成功！已解鎖深度分析",
+        "detail_table": "📊 原始磁場分佈表",
         "solution_title": "🛠️ 專屬數位化解方案",
-        "solution_msg": "系統已根據您號碼的長度與結構，演算出最佳對沖化解碼。",
         "remedy_code": "✨ 建議化解碼：",
         "remedy_score": "📈 化解碼預計能量分數：",
         "remedy_table": "📋 化解碼磁場解析報表",
-        "footer": "免責聲明：本分析僅供娛樂參考，生活幸福仍需靠自身努力。",
+        "footer": "免責聲明：本分析僅供娛樂參考。",
         "col_section": "區段", "col_star": "星號", "col_score": "分數"
     },
     "English": {
         "title": "🔮 Digital I-Ching Analysis (Pro)",
-        "input_label": "Enter the number to analyze (Phone or ID):",
+        "input_label": "Enter Number/ID (Letters supported):",
         "score_label": "Total Energy Score",
         "lock_msg": "🔒 Analysis Report Locked",
-        "unlock_benefit": "To provide the most accurate deep analysis, please pay to view:\n- Total Energy Score (Lucky/Unlucky)\n- Segmented energy analysis (8 Stars details)\n- Customized remedy report and comparison",
-        "pay_btn": "💳 Pay 1 USD to Unlock Full Report",
-        "paid_success": "✅ Payment Successful! Full report unlocked.",
-        "detail_table": "📊 Original Number Energy Distribution",
-        "advice_title": "💡 Deep Insight & Advice",
+        "unlock_benefit": "Pay to view:\n- Letter-to-number translation\n- 8 Stars detailed analysis\n- Customized remedy report",
+        "pay_btn": "💳 Pay 1 USD to Unlock",
+        "paid_success": "✅ Payment Successful!",
+        "detail_table": "📊 Original Energy Distribution",
         "solution_title": "🛠️ Customized Remedy Solution",
-        "solution_msg": "We have calculated the optimal remedy code based on your number structure.",
         "remedy_code": "✨ Suggested Remedy Code:",
         "remedy_score": "📈 Estimated Remedy Score:",
         "remedy_table": "📋 Remedy Code Analysis Report",
-        "footer": "Disclaimer: This analysis is for entertainment only.",
+        "footer": "Disclaimer: For entertainment purposes only.",
         "col_section": "Section", "col_star": "Star", "col_score": "Score"
     }
 }
@@ -57,6 +53,18 @@ class DigitalIChingPro:
             "六煞(凶/Mood)": {"pairs": ["16", "61", "47", "74", "38", "83", "29", "92"], "score": -15},
             "禍害(凶/Gossip)": {"pairs": ["17", "71", "89", "98", "46", "64", "23", "32"], "score": -15}
         }
+
+    # 字母轉數字邏輯 A=01, B=02...
+    def convert_letters(self, text):
+        converted = ""
+        for char in text.upper():
+            if char.isdigit():
+                converted += char
+            elif char.isalpha():
+                # A=01, B=02, ..., Z=26
+                num = ord(char) - ord('A') + 1
+                converted += f"{num:02d}" 
+        return converted
 
     def analyze(self, nums):
         results = []
@@ -85,102 +93,76 @@ class DigitalIChingPro:
             if pair in info["pairs"]: return name, info["score"]
         return "Normal", 0
 
-    def generate_dynamic_remedy(self, original_nums):
-        length = len(original_nums)
-        if length < 6: length = 6
-        if length > 12: length = 12 # 限制長度避免表格過長
-        
-        # 強大吉星組合
+    def generate_dynamic_remedy(self, clean_nums):
+        length = len(clean_nums)
+        length = max(6, min(12, length))
         best_pairs = ["13", "31", "68", "86", "49", "94", "14", "41", "19", "91", "78", "87"]
-        remedy_code = ""
-        while len(remedy_code) < length:
-            remedy_code += random.choice(best_pairs)
-        remedy_code = remedy_code[:length]
-        
-        # 對化解碼進行分析以生成報表
-        remedy_details, remedy_score = self.analyze(remedy_code)
-        # 強行拉高化解碼評分以符合邏輯
-        remedy_score = round(96 + random.uniform(0, 3.5), 1)
-        
+        remedy_code = "".join(random.choice(best_pairs) for _ in range(length//2 + 1))[:length]
+        remedy_details, _ = self.analyze(remedy_code)
+        remedy_score = round(96 + random.uniform(0, 3.8), 1)
         return remedy_code, remedy_score, remedy_details
 
-# --- 3. 輔助功能 ---
+# --- 3. 輔助與介面 ---
 def get_visitor_info():
     try:
-        response = requests.get("http://ip-api.com/json/", timeout=5).json()
-        if response.get("status") == "success":
-            return response.get("countryCode")
+        r = requests.get("http://ip-api.com/json/", timeout=3).json()
+        return r.get("countryCode") if r.get("status") == "success" else None
     except: return None
-    return None
 
-# --- 4. 網頁介面實作 ---
-st.set_page_config(page_title="I-Ching Energy Pro", page_icon="🔮", layout="centered")
+st.set_page_config(page_title="I-Ching Energy Pro", page_icon="🔮")
 
 if "lang_pref" not in st.session_state:
-    country_code = get_visitor_info()
-    st.session_state.lang_pref = "繁體中文" if country_code in ["TW", "HK", "MO", "CN"] else "English"
+    cc = get_visitor_info()
+    st.session_state.lang_pref = "繁體中文" if cc in ["TW", "HK", "MO", "CN"] else "English"
 
 selected_lang = st.sidebar.selectbox("Language/語言", list(LANGUAGES.keys()), 
                                      index=list(LANGUAGES.keys()).index(st.session_state.lang_pref))
 t = LANGUAGES[selected_lang]
-
 is_paid = st.query_params.get("pay") == "success"
 
 st.title(t["title"])
-num_input = st.text_input(t["input_label"], placeholder="例如：0912345678")
+raw_input = st.text_input(t["input_label"], placeholder="例如：A123456789 或 LINEID123")
 
-if num_input:
-    clean_nums = re.sub(r'\D', '', num_input)
+if raw_input:
     engine = DigitalIChingPro()
+    # 執行字母轉數字
+    clean_nums = engine.convert_letters(raw_input)
     details, score = engine.analyze(clean_nums)
     
     st.divider()
     
     if is_paid:
         st.success(t["paid_success"])
+        if any(c.isalpha() for c in raw_input):
+            st.info(f"🔢 **轉譯數據：** {clean_nums} (字母已自動轉化為磁場代碼)")
+        
         st.metric(t["score_label"], f"{score} 分/pts")
         
-        # 原始分析表
         with st.expander(t["detail_table"], expanded=True):
             df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
             st.table(df_orig)
         
-        # --- 動態化解方案與報表 ---
         st.divider()
         st.subheader(t["solution_title"])
-        
-        if score < 80: # 提高門檻，讓更多人看到化解方案
+        if score < 85:
             r_code, r_score, r_details = engine.generate_dynamic_remedy(clean_nums)
-            
-            st.error(f"⚠️ {t['solution_msg']}")
             col1, col2 = st.columns(2)
             col1.info(f"{t['remedy_code']}\n### **{r_code}**")
             col2.success(f"{t['remedy_score']}\n### **{r_score}**")
             
-            # 顯示化解碼的完整磁場分佈表
             st.markdown(f"#### {t['remedy_table']}")
-            df_remedy = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-            st.table(df_remedy)
-            
-            st.caption("💡 註：化解碼磁場已預先進行相位調和，建議用於社交平台 ID、解鎖密碼或作為副號參考。")
+            df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
+            st.table(df_rem)
         else:
-            st.write("✨ 您的數字能量結構非常平衡，無需特殊化解碼。")
-            
-        if st.button("🔄 重新分析 / Re-analyze"):
-            st.query_params.clear()
-            st.rerun()
+            st.write("✨ 能量極佳，維持現狀即可。")
     else:
         st.warning(t["lock_msg"])
-        st.info(f"📍 號碼 {num_input} 的能量數據已演算完畢。")
+        st.info(f"📍 內容已接收，包含字母轉譯與磁場計算已準備就緒。")
         st.write(t["unlock_benefit"])
+        st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
-        # PayPal 連結
-        paypal_payment_url = "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE"
-        st.link_button(t["pay_btn"], paypal_payment_url)
-        
-        if st.sidebar.button("🛠️ 測試：模擬支付解鎖"):
+        if st.sidebar.button("🛠️ 測試：模擬解鎖"):
             st.query_params["pay"] = "success"
             st.rerun()
 
-st.sidebar.caption(f"Visitor Location: {get_visitor_info()}")
 st.caption(t["footer"])
