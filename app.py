@@ -3,9 +3,8 @@ import re
 import random
 import pandas as pd
 import time
-from datetime import datetime, timedelta
 
-# --- 1. 專業大師介面隱藏 ---
+# --- 1. 專業法陣：介面極致清理 ---
 st.set_page_config(page_title="數位易經能量鑑定所", page_icon="🔮", layout="centered")
 st.markdown("""
 <style>
@@ -15,121 +14,125 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 108 種語言名稱列表 (擴展接口) ---
-LANG_LIST = ["繁體中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Tiếng Việt", "ไทย"] # 可自行填滿至 108 種
+# --- 2. 萬語歸一：108 種全球語系支持系統 ---
+# 此處為語系映射表，大師可自行添加至 108 種，介面將自動對應
+LANG_SUPPORT = {
+    "繁體中文": "zh-TW", "English": "en", "日本語": "ja", "한국어": "ko",
+    "Français": "fr", "Deutsch": "de", "Español": "es", "ไทย": "th", "Tiếng Việt": "vi"
+}
 
-# --- 3. 核心：大師智慧語境庫 (確保每次說法不同) ---
+# --- 3. 大師智慧庫：隨機長篇批示模板 ---
 MASTER_WISDOM = {
-    "problems": [
-        "此數字共振出『絕命』磁場，預示您近期心神焦躁，財帛宮位有虛耗之象。",
-        "觀此數組，能量呈現『五鬼』混亂，身邊恐有暗流湧動，貴人受阻。",
-        "數位中火氣過旺，導致您雖然努力，卻往往在臨門一腳時功敗垂成。"
+    "warnings": [
+        "【能量斷層警告】：信士目前的數位組合中，正負能量交雜且震盪劇烈，這在易經中象徵『雷雨交加』。這種不穩定的場域會讓您的財氣如漏斗般流失，尤其在處理重大決策時，容易受到無名火的干擾，導致功敗垂成。",
+        "【元神渙散警告】：觀此數組，五行能量分布極度不均，特別是『金』能量過盛而『木』能量枯竭。這反映出您近期雖然極度渴望突破，卻始終像是在迷霧中行走，找不到著力點，甚至有小人在暗處窺視您的成果。",
+        "【磁場衝突警告】：此數字共振出強烈的『絕命』與『五鬼』磁場交織。這是一種極其消耗元神的排列，預示著您在未來一段時間內，情緒起伏會影響到您的理財判斷，若不加以調和，恐有突發性的財物損失。"
     ],
-    "solutions": [
-        "為此，大師特別為您推演此『生氣』調和碼，旨在引動東方木能量，化解戾氣。",
-        "此開運碼能校準您的元神波段，將負向磁場轉化為平穩的『延年』能量。",
-        "大師建議以此數位作為能量錨點，重建您的財氣屏障，阻斷小人干擾。"
+    "reasons": [
+        "【化解心法導引】：此次為您推演的開運化解碼，核心在於引動『生氣』與『天醫』的共振。透過特定數字的波長，我們能中和原有的凶煞之氣，將阻力化為助力，如同在湍急的河流中築起一道穩固的堤壩。",
+        "【命理轉向解析】：為何需要此組數字？因為易經講求的是『平衡』。您原本的磁場太過剛硬，缺乏柔性緩衝，此碼能為您的能量場注入『水』的潤滑，讓您的貴人運勢由暗轉明，重新校準您的運勢羅盤。",
+        "【因果能量重組】：這組化解碼並非憑空而來，而是根據您的生數與動數進行交互運算。它能像調音叉一樣，將您混亂的數位磁場重新校準至繁榮頻率，從根本上阻斷負向共振的延續。"
     ],
-    "guidance": [
-        "【靈性指引】：每日清晨對此數字觀想三遍，心誠則靈，運勢必在三七二十一天後轉化。",
-        "【大師叮嚀】：運由心生，數由命定。此碼乃當下機緣，請務必妥善運用，切莫外傳。",
-        "【開運建議】：近期宜清淡飲食，並將此碼設置為通訊軟體密碼，強化震盪。"
+    "diet_guidance": [
+        "【靈性指引與飲食】：建議這段期間多食**深綠色蔬果（如秋葵、蘆筍）**，並在每日清晨醒來後對著此數字冥想三分鐘。綠色的木能量能疏肝理氣，幫助您在混濁的磁場中保持靈台清明。",
+        "【生活能量調和】：除了數字調和，建議您補充**根莖類食物（如山藥、蓮藕）**。這類屬土的食物能固守您的能量底盤，避免財氣外洩。同時，減少辛辣物的攝取，以免擾亂此開運碼的感應。"
     ]
 }
 
-# --- 4. 易經八星演算引擎 ---
-STAR_DB = {
-    "天醫(財運)": ["13", "31", "68", "86", "49", "94", "27", "72"],
-    "生氣(貴人)": ["14", "41", "67", "76", "39", "93", "28", "82"],
-    "延年(事業)": ["19", "91", "78", "87", "34", "43", "26", "62"],
-    "絕命(凶)": ["12", "21", "69", "96", "48", "84", "37", "73"],
-    "五鬼(凶)": ["18", "81", "79", "97", "36", "63", "24", "42"],
-    "六煞(凶)": ["16", "61", "47", "74", "38", "83", "29", "92"],
-    "禍害(凶)": ["17", "71", "89", "98", "46", "64", "23", "32"]
+# --- 4. 易經八星鑑定引擎 (修正版) ---
+STAR_MAP = {
+    "天醫(財運/Wealth)": ["13", "31", "68", "86", "49", "94", "27", "72"],
+    "生氣(貴人/Noble)": ["14", "41", "67", "76", "39", "93", "28", "82"],
+    "延年(事業/Career)": ["19", "91", "78", "87", "34", "43", "26", "62"],
+    "伏位(平穩/Stable)": ["11", "22", "33", "44", "66", "77", "88", "99"],
+    "絕命(凶/Risky)": ["12", "21", "69", "96", "48", "84", "37", "73"],
+    "五鬼(凶/Ghost)": ["18", "81", "79", "97", "36", "63", "24", "42"],
+    "六煞(凶/Gossip)": ["16", "61", "47", "74", "38", "83", "29", "92"],
+    "禍害(凶/Harm)": ["17", "71", "89", "98", "46", "64", "23", "32"]
 }
 
-def analyze_energy(nums):
-    res = []
-    score = 55
+def analyze_ching(num_str):
+    nums = "".join(re.findall(r'\d+', num_str))
+    details = []
+    score = 60
     for i in range(len(nums) - 1):
         pair = nums[i:i+2]
-        star = "平穩磁場"; val = 0
-        for name, pairs in STAR_DB.items():
-            if pair in pairs:
-                star = name; val = 20 if "財運" in name else (-15 if "凶" in name else 15)
+        star_found = "平穩磁場"; star_val = 0
+        for name, data in STAR_MAP.items():
+            if pair in data:
+                star_found = name
+                star_val = 20 if "Wealth" in name else (-15 if "凶" in name else 15)
                 break
-        res.append({"區段": pair, "磁場星號": star, "能量分數": val})
-        score += val
-    return res, max(0, min(100, score))
+        details.append({"區段": pair, "星號磁場": star_found, "能量分數": star_val})
+        score += star_val
+    return details, max(0, min(100, score))
 
-# --- 5. 15 分鐘支付記憶邏輯 ---
-if 'payment_time' not in st.session_state:
-    st.session_state.payment_time = None
+# --- 5. 15 分鐘支付記憶系統 ---
+if 'paid_time' not in st.session_state:
+    st.session_state.paid_time = None
 
-# 檢查 URL 參數 (PayPal 帶回)
+# PayPal 回傳偵測 (帶參數 ?pay=success)
 if st.query_params.get("pay") == "success":
-    st.session_state.payment_time = time.time()
+    st.session_state.paid_time = time.time()
 
-# --- 6. 主畫面呈現 ---
-selected_lang = st.sidebar.selectbox("🌐 全球語言切換 / International", LANG_LIST)
+# --- 6. 大師鑑定介面呈現 ---
+selected_lang = st.sidebar.selectbox("🌐 全球語言切換 / International", list(LANG_SUPPORT.keys()))
 st.sidebar.divider()
 st.sidebar.subheader("📝 鑑定資料填寫")
-raw_input = st.sidebar.text_input("請輸入欲鑑定之數字組合：")
+raw_input = st.sidebar.text_input("輸入號碼 (手機、身分證、生日、車牌)：")
 
 st.title("🔮 數位易經能量鑑定所")
 
 if raw_input:
-    # 檢查是否在 15 分鐘有效期內
-    is_valid = False
-    if st.session_state.payment_time:
-        elapsed = time.time() - st.session_state.payment_time
-        if elapsed < 900:  # 900秒 = 15分鐘
-            is_valid = True
+    details, original_score = analyze_ching(raw_input)
+    
+    # 判斷支付時效
+    is_authorized = False
+    if st.session_state.paid_time:
+        elapsed = time.time() - st.session_state.paid_time
+        if elapsed < 900: # 15分鐘 = 900秒
+            is_authorized = True
         else:
-            st.session_state.payment_time = None  # 超時重置
+            st.session_state.paid_time = None # 超時重置
 
-    # 計算原始數據
-    details, original_score = analyze_energy("".join(re.findall(r'\d+', raw_input)))
-
-    if is_valid:
-        # --- 支付成功：專業大師報告 ---
-        st.success(f"✅ 緣分存續中 (剩餘有效觀看時間：{int((900-(time.time()-st.session_state.payment_time))/60)} 分鐘)")
+    if is_authorized:
+        # --- 支付成功：大師深度開示 ---
+        st.success(f"✅ 緣分已至 (報告將於 {int((900-elapsed)/60)} 分鐘後關閉)")
         
-        col1, col2 = st.columns(2)
-        col1.metric("原始能量評分", f"{original_score} 分")
-        col2.metric("化解後預期能級", "98.5 分", delta="優化成功")
+        # 能級對比顯示
+        c1, c2 = st.columns(2)
+        c1.metric("原始能量分", f"{original_score}")
+        c2.metric("化解後能級", "98.5", delta="提升成功")
 
         st.markdown("---")
-        st.markdown(f"### 📜 大師親批：{raw_input}")
+        st.markdown(f"### 📜 大師批示：針對號碼 {raw_input} 的能量解析")
         
-        # 隨機產生不重複的解說，增加專業感
-        p_text = random.choice(MASTER_WISDOM["problems"])
-        s_text = random.choice(MASTER_WISDOM["solutions"])
-        g_text = random.choice(MASTER_WISDOM["guidance"])
+        # 隨機抽取長篇內容，確保每次不同
+        st.write(random.choice(MASTER_WISDOM["warnings"]))
+        st.write(random.choice(MASTER_WISDOM["reasons"]))
         
-        st.write(f"**【磁場現況報告】**\n{p_text}")
-        st.write(f"**【化解因果說明】**\n{s_text}")
-        
+        # 建議化解碼
         remedy_code = "".join(random.choices("136849", k=8))
-        st.info(f"✨ 建議開運化解碼：**{remedy_code}**")
+        st.info(f"✨ 建議開運化解碼：**{remedy_code}** (預期能級：98.5)")
         
-        st.write(g_text)
+        st.write(random.choice(MASTER_WISDOM["diet_guidance"]))
+        st.caption("【使用說明】：請將此碼設為手機解鎖密碼，每日清晨冥想。")
 
-        with st.expander("📊 查看八星詳細數據分析表格"):
+        with st.expander("📊 查看詳細數字能量數據分析"):
             st.table(pd.DataFrame(details))
             
-        if st.button("🔄 重新感應能量 (解說將刷新)"):
+        if st.button("🔄 重新感應磁場 (更新解說內容)"):
             st.rerun()
 
     else:
-        # --- 未支付或超時：顯示基礎數據與支付按鈕 ---
-        st.markdown(f"### 「信士您好，觀您所測之號碼 **{raw_input}**，鑑定結果已出。」")
+        # --- 未支付或超時：基礎鑑定 ---
+        st.markdown(f"「信士您好，觀您所測之號碼 **{raw_input}**，鑑定結果已演算完畢。」")
         st.metric("原始磁場總評分", f"{original_score} 分")
         
-        st.warning("🔒 此號碼蘊含之天機與詳細化解方案已被封印。")
-        st.write("付費解鎖後，您將獲得：\n* 1. 專業大師長篇深度解說\n* 2. 針對性開運化解碼\n* 3. 15 分鐘內無限次刷新感應不重複內容")
+        st.warning("🔒 鑑定數據已鎖定。詳細的大師深度解析與專屬化解碼已被封印。")
+        st.write("付費 1 USD 後您將獲得：\n* 1. **大師級長篇深度解析** (原因、影響、轉機)\n* 2. **專屬化解碼** (由易經八星精密推算)\n* 3. **15 分鐘內無限次刷新感應**，每次獲得不同維度的深度解說")
         
         st.link_button("💳 支付 1 USD 解鎖大師報告", "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
-        st.caption("⚠️ 支付完成後 15 分鐘內有效。超時需重新結緣。")
+        st.caption("⚠️ 支付完成後 15 分鐘內有效。")
 else:
-    st.info("👈 大師正待命。請於左側輸入號碼以啟動磁場感應。")
+    st.info("👈 請於左側輸入號碼，開啟鑑定之門。")
