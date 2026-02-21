@@ -50,6 +50,10 @@ class DigitalIChingPro:
         results, total_score, i = [], 60, 0
         counts = {"Wealth": 0, "Noble": 0, "Career": 0}
         
+        # 確保輸入至少有兩個數字
+        if len(nums) < 2:
+            return results, total_score, counts
+
         while i < len(nums) - 1:
             current = nums[i]
             if current in '05': i += 1; continue
@@ -79,15 +83,17 @@ class DigitalIChingPro:
         return "平穩磁場", 0
 
     def generate_dynamic_remedy(self, original_nums, star_counts):
-        # 使用原號碼作為隨機種子，確保「同號同結果，異號異結果」
+        # 使用原號碼作為隨機種子
         random.seed(original_nums)
         
-        length = max(6, min(12, len(original_nums)))
+        # 修正長度邏輯，確保足夠長度進行分析
+        target_len = max(8, len(original_nums))
+        if target_len > 12: target_len = 12
+        
         pool_wealth = ["13", "31", "68", "86", "49", "94"]
         pool_noble = ["14", "41", "67", "76", "39", "93"]
         pool_career = ["19", "91", "78", "87", "34", "43"]
         
-        # 找出最缺的能量
         min_energy = min(star_counts, key=star_counts.get)
         if min_energy == "Wealth":
             primary_pool, reason = pool_wealth, "加強財庫天醫磁場"
@@ -97,32 +103,24 @@ class DigitalIChingPro:
             primary_pool, reason = pool_career, "固守事業延年磁場"
             
         remedy_code = ""
-        while len(remedy_code) < length:
+        # 確保 remedy_code 是偶數長度且由吉星對組成
+        while len(remedy_code) < target_len:
             current_pool = primary_pool if random.random() < 0.7 else (pool_wealth + pool_noble + pool_career)
             remedy_code += random.choice(current_pool)
         
-        remedy_code = remedy_code[:length]
-        remedy_details, _ = self.analyze(remedy_code)
+        # 截斷並確保至少有 6 碼
+        remedy_code = remedy_code[:target_len]
+        if len(remedy_code) % 2 != 0: remedy_code += random.choice("12346789")
         
-        # 化解碼固定高分區間 (96.5 - 99.8)
+        # 呼叫分析
+        remedy_details, _, _ = self.analyze(remedy_code)
+        
         final_r_score = round(96.5 + (random.random() * 3.3), 1)
         return remedy_code, final_r_score, remedy_details, reason
-
-# --- 3. 輔助功能 ---
-def get_visitor_info():
-    try:
-        r = requests.get("http://ip-api.com/json/", timeout=3).json()
-        return r.get("countryCode") if r.get("status") == "success" else None
-    except: return None
 
 # --- 4. 網頁介面實作 ---
 st.set_page_config(page_title="數位易經鑑定所", page_icon="🔮")
 t = LANGUAGES["繁體中文"]
-
-# 自動語言/國家偵測 (Side effect)
-if "lang_pref" not in st.session_state:
-    cc = get_visitor_info()
-    st.session_state.lang_pref = "繁體中文" if cc in ["TW", "HK", "MO", "CN"] else "English"
 
 is_paid = st.query_params.get("pay") == "success"
 
@@ -132,14 +130,14 @@ raw_input = st.text_input(t["input_label"], placeholder="例如：0912345678")
 if raw_input:
     engine = DigitalIChingPro()
     clean_nums = engine.convert_letters(raw_input)
+    
+    # 執行原始號碼分析
     details, score, star_counts = engine.analyze(clean_nums)
     
     st.divider()
     
     if is_paid:
         st.success(t["paid_success"])
-        
-        # 算命師口吻診斷
         st.subheader(t["master_voice_title"])
         st.write(f"> 「信士您好，觀您所測之號碼 `{raw_input}`，其數位磁場中蘊含之能量與您氣運息息相關。」")
         
@@ -153,44 +151,48 @@ if raw_input:
             st.success("🌟 此乃吉數！正磁場環繞，貴人相助，利於穩健發展。")
 
         with st.expander(t["detail_table"], expanded=True):
-            df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-            st.table(df_orig)
+            if details:
+                df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
+                st.table(df_orig)
+            else:
+                st.write("號碼長度不足，無法生成磁場對比。")
         
-        # --- 專業化解方案 ---
+        # --- 專業化解方案 (此處已加入錯誤防護) ---
         st.divider()
         st.subheader(t["solution_title"])
         
-        remedy_code, r_score, r_details, reason = engine.generate_dynamic_remedy(clean_nums, star_counts)
-        
-        st.write(f"""
-        **為何需要此化解方案？**
-        宇宙萬物皆為能量共振。大師觀測您原號碼中 **{reason}** 之氣明顯不足，故特別演算此對沖陣法。
-        
-        這組**『開運化解碼』**並非要您更換門號，而是透過**「補償共振」**原理。您可以將此碼設為手機解鎖密碼、社群平台帳號或支付密碼，透過每日頻繁的使用，將磁場導向吉星軌道。
-        """)
-        
-        col1, col2 = st.columns(2)
-        col1.info(f"{t['remedy_code']}\n### **{remedy_code}**")
-        col2.success(f"{t['remedy_score']}\n### **{r_score}**")
-        
-        st.markdown(f"#### {t['remedy_table']}")
-        df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-        st.table(df_rem)
+        try:
+            remedy_code, r_score, r_details, reason = engine.generate_dynamic_remedy(clean_nums, star_counts)
+            
+            st.write(f"""
+            **為何需要此化解方案？**
+            宇宙萬物皆為能量共振。大師觀測您原號碼中 **{reason}** 之氣明顯不足，故特別演算此對沖陣法。
+            """)
+            
+            col1, col2 = st.columns(2)
+            col1.info(f"{t['remedy_code']}\n### **{remedy_code}**")
+            col2.success(f"{t['remedy_score']}\n### **{r_score}**")
+            
+            st.markdown(f"#### {t['remedy_table']}")
+            if r_details:
+                df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
+                st.table(df_rem)
+            else:
+                st.write("化解磁場計算中...")
+        except Exception as e:
+            st.error(f"能量調和計算暫時中斷，請重試。錯誤資訊: {str(e)}")
         
         if st.button("🔄 重新鑑定新號碼"):
             st.query_params.clear()
             st.rerun()
     else:
+        # 付費牆邏輯
         st.warning(t["lock_msg"])
         st.info("📍 鑑定數據已演算完畢。請支付 1 USD，由大師為您親自揭開命運密碼。")
-        st.write(t["unlock_benefit"])
-        
-        # PayPal 支付按鈕
         st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
         if st.sidebar.button("🛠️ 測試模式：直接解鎖"):
             st.query_params["pay"] = "success"
             st.rerun()
 
-st.sidebar.caption(f"Visitor Location: {get_visitor_info()}")
 st.caption(t["footer"])
