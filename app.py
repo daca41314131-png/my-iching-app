@@ -3,6 +3,7 @@ import re
 import requests
 import random
 import pandas as pd
+from datetime import datetime, timedelta
 
 # --- 1. 多國語言與介面文字 ---
 LANGUAGES = {
@@ -12,9 +13,9 @@ LANGUAGES = {
         "type_options": ["手機號碼", "身分證字號", "LINE ID", "出生日期 (YYYYMMDD)", "車牌號碼"],
         "score_label": "原始磁場總評分",
         "lock_msg": "🔒 鑑定報告已被封印",
-        "unlock_benefit": "此號碼尚未解鎖，支付 1 USD 即可查閱：\n- 專屬八星吉凶詳細鑑定\n- 字母/日期轉譯深度解析\n- **命理師專屬化解建議與調和碼報表**",
+        "unlock_benefit": "此號碼尚未解鎖，支付 1 USD 即可查閱：\n- 專屬八星吉凶詳細鑑定\n- 15分鐘內無限次重複查看\n- **命理師專屬化解建議與調和碼報表**",
         "pay_btn": "💳 支付 1 USD 解鎖此號碼",
-        "paid_success": "✅ 緣分已至，該號碼報告已開啟",
+        "paid_success": "✅ 緣分已至，報告已開啟 (有效期：15分鐘)",
         "detail_table": "📊 原始磁場分佈解析",
         "master_voice_title": "📜 命理師的叮嚀",
         "solution_title": "🛠️ 專屬能量調和方案",
@@ -99,25 +100,24 @@ class DigitalIChingPro:
 st.set_page_config(page_title="數位易經鑑定所", page_icon="🔮")
 t = LANGUAGES["繁體中文"]
 
-# 用於儲存本對話 session 中已付費的號碼
-if "paid_numbers" not in st.session_state:
-    st.session_state.paid_numbers = set()
+# 使用字典存儲：{ "號碼": 支付時間物件 }
+if "paid_history" not in st.session_state:
+    st.session_state.paid_history = {}
 
 # 側邊欄設定
 st.sidebar.header("📝 鑑定資料填寫")
 selected_type = st.sidebar.selectbox("選擇類型", t["type_options"])
 raw_input = st.sidebar.text_input(t["input_label"], placeholder="請輸入...")
 
-# --- 管理者權限設定 ---
+# 管理者設定
 st.sidebar.divider()
-admin_key = st.sidebar.text_input("🔑 管理者密鑰 (解鎖用)", type="password")
+admin_key = st.sidebar.text_input("🔑 管理者密鑰", type="password")
+ADMIN_PASSWORDS = ["master888", "admin999"] 
 
-# 這裡設定兩個管理者的獨立密碼
-ADMIN_PASSWORDS = ["@Daca4131911", "kayhsu1014"] 
-
-# 檢查 PayPal 支付成功跳轉
+# 檢查支付成功跳轉 (模擬成功)
 if st.query_params.get("pay") == "success" and raw_input:
-    st.session_state.paid_numbers.add(raw_input)
+    # 紀錄支付時間為當前
+    st.session_state.paid_history[raw_input] = datetime.now()
 
 st.title(t["title"])
 
@@ -125,18 +125,25 @@ if raw_input:
     engine = DigitalIChingPro()
     clean_nums = engine.convert_to_nums(raw_input)
     details, score, star_counts = engine.analyze(clean_nums)
-    is_current_paid = raw_input in st.session_state.paid_numbers
+    
+    # --- 關鍵：15分鐘時間檢查邏輯 ---
+    is_current_paid = False
+    if raw_input in st.session_state.paid_history:
+        pay_time = st.session_state.paid_history[raw_input]
+        # 如果當前時間與支付時間差距小於 15 分鐘
+        if datetime.now() - pay_time < timedelta(minutes=15):
+            is_current_paid = True
+            remaining_time = 15 - (datetime.now() - pay_time).seconds // 60
+        else:
+            # 已過期，從歷史紀錄移除
+            del st.session_state.paid_history[raw_input]
     
     if is_current_paid:
-        st.success(t["paid_success"])
+        st.success(f"{t['paid_success']} - 剩餘免費時間：約 {remaining_time} 分鐘")
         st.subheader(t["master_voice_title"])
-        st.write(f"> 「信士您好，觀您所測之{selected_type} `{raw_input}`，其能量與您息息相關。」")
+        st.write(f"> 「信士您好，觀您所測之{selected_type} `{raw_input}`，其能量與您氣運息息相關。」")
         st.metric(t["score_label"], f"{score} 分")
         
-        if score < 60: st.error("❗ 此號碼凶星壓制，易致事倍功半、波折重重。")
-        elif score < 85: st.warning("⚠️ 能量尚屬平穩，然吉星微弱，仍有提升空間。")
-        else: st.success("🌟 此乃上乘之數！正磁場環繞，貴人相助，利於發展。")
-
         with st.expander(t["detail_table"], expanded=True):
             if details:
                 df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
@@ -155,20 +162,18 @@ if raw_input:
             df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
             st.table(df_rem)
 
-        if st.sidebar.button("🔄 鑑定下一個新號碼"):
-            st.query_params.clear()
-            st.rerun()
     else:
+        # 未付費或已過期
         st.warning(t["lock_msg"])
         st.info(f"📍 **{selected_type}：{raw_input}** 的鑑定數據已演算完畢。")
         st.write(t["unlock_benefit"])
         st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
-        # --- 管理者權限檢查邏輯 ---
+        # 管理者解鎖
         if admin_key in ADMIN_PASSWORDS:
             st.sidebar.success("✅ 管理者身分確認")
-            if st.sidebar.button("🛠️ 權限解鎖：當前號碼"):
-                st.session_state.paid_numbers.add(raw_input)
+            if st.sidebar.button("🛠️ 權限解鎖 (15min)"):
+                st.session_state.paid_history[raw_input] = datetime.now()
                 st.rerun()
         elif admin_key != "":
             st.sidebar.error("❌ 密鑰無效")
