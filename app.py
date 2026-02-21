@@ -7,36 +7,21 @@ import pandas as pd
 # --- 1. 多國語言字典設定 ---
 LANGUAGES = {
     "繁體中文": {
-        "title": "🔮 數字易經能量分析 (專業版)",
-        "input_label": "請輸入號碼 (支援字母，如身分證、LINE ID)：",
-        "score_label": "能量總評分",
-        "lock_msg": "🔒 分析報告已鎖定",
-        "unlock_benefit": "支付後即可查看：\n- 字母轉譯數據與能量評分\n- 逐段數字磁場解析 (八星明細)\n- 專屬化解方案與對比報表",
-        "pay_btn": "💳 支付 1 USD 解鎖完整報告",
-        "paid_success": "✅ 付款成功！已解鎖深度分析",
-        "detail_table": "📊 原始磁場分佈表",
-        "solution_title": "🛠️ 專屬數位化解方案",
-        "remedy_code": "✨ 建議化解碼：",
-        "remedy_score": "📈 化解碼預計能量分數：",
-        "remedy_table": "📋 化解碼磁場解析報表",
-        "footer": "免責聲明：本分析僅供娛樂參考。",
+        "title": "🔮 數位易經能量鑑定所",
+        "input_label": "請輸入欲鑑定之號碼 (手機、身分證、LINE ID)：",
+        "score_label": "原始磁場總評分",
+        "lock_msg": "🔒 運勢報告已被封印",
+        "unlock_benefit": "支付解鎖後，大師將為您提供：\n- 原始磁場詳細鑑定 (八星吉凶)\n- 字母轉譯深度解析\n- **命理師專屬化解建議與磁場調和碼**",
+        "pay_btn": "💳 支付 1 USD 請大師指點迷津",
+        "paid_success": "✅ 緣分已至，報告已為您開啟",
+        "detail_table": "📊 原始磁場分佈解析",
+        "master_voice_title": "📜 命理師的叮嚀",
+        "solution_title": "🛠️ 專屬能量調和方案",
+        "remedy_code": "✨ 建議開運化解碼：",
+        "remedy_score": "📈 化解後預期能級：",
+        "remedy_table": "📋 化解碼磁場佈局",
+        "footer": "命理分析僅供參考，心誠則靈，好運自來。",
         "col_section": "區段", "col_star": "星號", "col_score": "分數"
-    },
-    "English": {
-        "title": "🔮 Digital I-Ching Analysis (Pro)",
-        "input_label": "Enter Number/ID (Letters supported):",
-        "score_label": "Total Energy Score",
-        "lock_msg": "🔒 Analysis Report Locked",
-        "unlock_benefit": "Pay to view:\n- Letter-to-number translation\n- 8 Stars detailed analysis\n- Customized remedy report",
-        "pay_btn": "💳 Pay 1 USD to Unlock",
-        "paid_success": "✅ Payment Successful!",
-        "detail_table": "📊 Original Energy Distribution",
-        "solution_title": "🛠️ Customized Remedy Solution",
-        "remedy_code": "✨ Suggested Remedy Code:",
-        "remedy_score": "📈 Estimated Remedy Score:",
-        "remedy_table": "📋 Remedy Code Analysis Report",
-        "footer": "Disclaimer: For entertainment purposes only.",
-        "col_section": "Section", "col_star": "Star", "col_score": "Score"
     }
 }
 
@@ -54,22 +39,15 @@ class DigitalIChingPro:
             "禍害(凶/Gossip)": {"pairs": ["17", "71", "89", "98", "46", "64", "23", "32"], "score": -15}
         }
 
-    # 字母轉數字邏輯 A=01, B=02...
     def convert_letters(self, text):
         converted = ""
         for char in text.upper():
-            if char.isdigit():
-                converted += char
-            elif char.isalpha():
-                # A=01, B=02, ..., Z=26
-                num = ord(char) - ord('A') + 1
-                converted += f"{num:02d}" 
+            if char.isdigit(): converted += char
+            elif char.isalpha(): converted += f"{ord(char) - ord('A') + 1:02d}"
         return converted
 
     def analyze(self, nums):
-        results = []
-        total_score = 60
-        i = 0
+        results, total_score, i = [], 60, 0
         while i < len(nums) - 1:
             current = nums[i]
             if current in '05': i += 1; continue
@@ -82,50 +60,34 @@ class DigitalIChingPro:
             if next_idx < len(nums):
                 pair = current + nums[next_idx]
                 star_name, base_score = self.get_star_info(pair)
-                final_pair_score = base_score * (1.2 if has_five else 1.0) * (0.5 if has_zero else 1.0)
-                total_score += final_pair_score
-                results.append({"Section": nums[i:next_idx+1], "Star": star_name, "Score": round(final_pair_score, 1)})
+                final_score = base_score * (1.2 if has_five else 1.0) * (0.5 if has_zero else 1.0)
+                total_score += final_score
+                results.append({"Section": nums[i:next_idx+1], "Star": star_name, "Score": round(final_score, 1)})
             i += 1
         return results, max(0, min(100, round(total_score, 1)))
 
     def get_star_info(self, pair):
         for name, info in self.star_config.items():
             if pair in info["pairs"]: return name, info["score"]
-        return "Normal", 0
+        return "平穩磁場", 0
 
-    def generate_dynamic_remedy(self, clean_nums):
-        length = len(clean_nums)
-        length = max(6, min(12, length))
-        best_pairs = ["13", "31", "68", "86", "49", "94", "14", "41", "19", "91", "78", "87"]
+    def generate_dynamic_remedy(self, original_nums):
+        length = max(6, min(12, len(original_nums)))
+        best_pairs = ["13", "31", "68", "86", "49", "94", "14", "41", "19", "91"]
         remedy_code = "".join(random.choice(best_pairs) for _ in range(length//2 + 1))[:length]
         remedy_details, _ = self.analyze(remedy_code)
-        remedy_score = round(96 + random.uniform(0, 3.8), 1)
-        return remedy_code, remedy_score, remedy_details
+        return remedy_code, round(96 + random.uniform(0, 3.5), 1), remedy_details
 
-# --- 3. 輔助與介面 ---
-def get_visitor_info():
-    try:
-        r = requests.get("http://ip-api.com/json/", timeout=3).json()
-        return r.get("countryCode") if r.get("status") == "success" else None
-    except: return None
-
-st.set_page_config(page_title="I-Ching Energy Pro", page_icon="🔮")
-
-if "lang_pref" not in st.session_state:
-    cc = get_visitor_info()
-    st.session_state.lang_pref = "繁體中文" if cc in ["TW", "HK", "MO", "CN"] else "English"
-
-selected_lang = st.sidebar.selectbox("Language/語言", list(LANGUAGES.keys()), 
-                                     index=list(LANGUAGES.keys()).index(st.session_state.lang_pref))
-t = LANGUAGES[selected_lang]
+# --- 3. 網頁介面 ---
+st.set_page_config(page_title="數位易經", page_icon="🔮")
+t = LANGUAGES["繁體中文"]
 is_paid = st.query_params.get("pay") == "success"
 
 st.title(t["title"])
-raw_input = st.text_input(t["input_label"], placeholder="例如：A123456789 或 LINEID123")
+raw_input = st.text_input(t["input_label"], placeholder="例如：0912345678")
 
 if raw_input:
     engine = DigitalIChingPro()
-    # 執行字母轉數字
     clean_nums = engine.convert_letters(raw_input)
     details, score = engine.analyze(clean_nums)
     
@@ -133,35 +95,50 @@ if raw_input:
     
     if is_paid:
         st.success(t["paid_success"])
-        if any(c.isalpha() for c in raw_input):
-            st.info(f"🔢 **轉譯數據：** {clean_nums} (字母已自動轉化為磁場代碼)")
         
-        st.metric(t["score_label"], f"{score} 分/pts")
+        # 命理師的開場白
+        st.subheader(t["master_voice_title"])
+        st.write(f"> 「信士您好，觀您所測之號碼 `{raw_input}`，其數位磁場中蘊含之能量與您息息相關。」")
         
-        with st.expander(t["detail_table"], expanded=True):
-            df_orig = pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-            st.table(df_orig)
+        st.metric(t["score_label"], f"{score} 分")
         
+        # 針對分數給予算命師風格的評語
+        if score < 60:
+            st.error("❗ 此號碼磁場較為駁雜，凶星能量壓制了正磁場，易致事倍功半、波折重重。")
+        elif score < 85:
+            st.warning("⚠️ 能量尚屬平穩，然貴人星微弱，事業與財氣仍有進步空間。")
+        else:
+            st.success("🌟 此乃上乘之數！正磁場環繞，利於開疆闢土，守成亦佳。")
+
+        with st.expander(t["detail_table"]):
+            st.table(pd.DataFrame(details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]}))
+        
+        # --- 算命師解釋化解碼的原因 ---
         st.divider()
         st.subheader(t["solution_title"])
-        if score < 85:
-            r_code, r_score, r_details = engine.generate_dynamic_remedy(clean_nums)
-            col1, col2 = st.columns(2)
-            col1.info(f"{t['remedy_code']}\n### **{r_code}**")
-            col2.success(f"{t['remedy_score']}\n### **{r_score}**")
-            
-            st.markdown(f"#### {t['remedy_table']}")
-            df_rem = pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]})
-            st.table(df_rem)
-        else:
-            st.write("✨ 能量極佳，維持現狀即可。")
+        
+        st.write("""
+        **為何要使用化解碼？**
+        宇宙萬物皆為能量波動，數字亦然。若原始號碼含有「五鬼」、「絕命」等負面磁場，就像是家中的門窗漏風，財氣不聚、元神受損。
+        
+        大師為您演算的這組**『開運化解碼』**，其原理並非取代原號碼，而是透過**「同頻對沖」**與**「能量補正」**的方式，將其設置為您的通訊軟體密碼、解鎖碼或社交暱稱。透過每日重複的使用與共振，能慢慢引動周圍磁場往吉星靠攏。
+        """)
+        
+        r_code, r_score, r_details = engine.generate_dynamic_remedy(clean_nums)
+        col1, col2 = st.columns(2)
+        col1.info(f"{t['remedy_code']}\n### **{r_code}**")
+        col2.success(f"{t['remedy_score']}\n### **{r_score}**")
+        
+        st.markdown(f"#### {t['remedy_table']}")
+        st.table(pd.DataFrame(r_details).rename(columns={"Section": t["col_section"], "Star": t["col_star"], "Score": t["col_score"]}))
+        
     else:
         st.warning(t["lock_msg"])
-        st.info(f"📍 內容已接收，包含字母轉譯與磁場計算已準備就緒。")
+        st.info("📍 數據分析已封印，請支付 1 USD，由大師為您親自揭開命運密碼。")
         st.write(t["unlock_benefit"])
         st.link_button(t["pay_btn"], "https://www.paypal.com/ncp/payment/ZAN2GMGB4Y4JE")
         
-        if st.sidebar.button("🛠️ 測試：模擬解鎖"):
+        if st.sidebar.button("🛠️ 開發測試：直接揭開天機"):
             st.query_params["pay"] = "success"
             st.rerun()
 
