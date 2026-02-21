@@ -4,27 +4,17 @@ import random
 import pandas as pd
 from datetime import datetime, timedelta
 
-# --- 1. 極致專業介面與 SEO 設定 (這部分會被完全隱藏) ---
-# 我們將標籤內容放入一個 HTML 區塊，並加上更強力的 CSS 隱藏規則
-CLEAN_INTERFACE_AND_SEO = """
+# --- 1. 極致專業介面與 SEO 設定 (完全隱藏在背景) ---
+CLEAN_MARKUP = """
 <style>
-    /* 1. 隱藏所有 Streamlit 標誌與按鈕 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stDeployButton {display:none !important;}
     button[title="View source"] {display:none !important;}
     [data-testid="stStatusWidget"] {visibility: hidden;}
-    [data-testid="stToolbar"] {visibility: hidden;}
-    
-    /* 2. 清除側邊欄多餘的裝飾 */
+    /* 隱藏側邊欄頂部裝飾 */
     [data-testid="stSidebarNav"] {display: none;}
-    
-    /* 3. 調整字體與整體美感 */
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans TC', sans-serif;
-    }
 </style>
 
 <script type="application/ld+json">
@@ -32,34 +22,39 @@ CLEAN_INTERFACE_AND_SEO = """
   "@context": "https://schema.org",
   "@type": "Service",
   "name": "數位易經能量鑑定所",
-  "description": "專業數位磁場鑑定，透過易經八星演算提供專屬能量調和方案。",
-  "areaServed": "TW",
-  "provider": {
-    "@type": "LocalBusiness",
-    "name": "數位易經能量鑑定所",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Taipei"
-    }
-  }
+  "description": "專業數位磁場鑑定與能量調和方案",
+  "areaServed": "TW"
 }
 </script>
 """
 
-# 必須是 Streamlit 的第一個指令
 st.set_page_config(page_title="數位易經能量鑑定所", page_icon="🔮", layout="centered")
+# 注入隱藏標籤
+st.markdown(CLEAN_MARKUP, unsafe_allow_html=True)
 
-# 關鍵：注入 CSS 與 SEO，這絕對不會在畫面上顯示任何文字代碼
-st.markdown(CLEAN_INTERFACE_AND_SEO, unsafe_allow_html=True)
+# --- 2. 大師解說庫 (找回您的專業度) ---
+REASONS = [
+    "信士可知，數字乃宇宙能量之顯化。您原始號碼中的氣場如同先天之命，雖有定數，卻非不可改之侷限。目前的能量分佈顯示，某些負向磁場正潛移默化地干擾您的氣運，導致財氣不聚、元神渙散。",
+    "在易經數位磁場中，每一個組合都是一個微型能量場。您目前的組合中，正負能量比例失衡，這代表您的『共振頻率』偏離了繁榮的軌道。這就像是一個人穿了不合腳的鞋，走得再快也會感到疲憊。"
+]
 
-# --- 2. 核心邏輯類別 (修正了截圖中的解析錯誤) ---
+DIETS = [
+    "【靈性能量指引】：除了數字調和，內在能量的清理亦至關重要。建議信士這段期間多食**深綠色蔬果（如菠菜、綠花椰菜）**，其木能量能助您疏肝理氣，強化『生氣』貴人場。",
+    "【能量飲食建議】：觀您磁場火氣較旺，建議補充**根莖類食物（如地瓜、山藥）**，這類屬於『土』屬性的食物能幫助您沉穩能量、固守財庫。飲食宜清淡，避免過多紅肉。"
+]
+
+ADVICES = [
+    "【開運法門】：請將此調和碼設置為手機解鎖密碼。每日至少『觀想』此組數字 21 次。心誠則靈，好運自來。",
+    "【大師叮嚀】：此碼乃當下機緣所得。建議將其書寫於紅紙上放置於皮夾內，它將成為您的能量錨點，助您重新匯聚正磁場。"
+]
+
+# --- 3. 核心運算引擎 ---
 class DigitalIChingPro:
     def __init__(self):
         self.star_config = {
             "天醫(財運)": {"pairs": ["13", "31", "68", "86", "49", "94", "27", "72"], "score": 20},
             "生氣(貴人)": {"pairs": ["14", "41", "67", "76", "39", "93", "28", "82"], "score": 15},
             "延年(事業)": {"pairs": ["19", "91", "78", "87", "34", "43", "26", "62"], "score": 15},
-            "伏位(平穩)": {"pairs": ["11", "22", "33", "44", "66", "77", "88", "99"], "score": 10},
             "絕命(凶)": {"pairs": ["12", "21", "69", "96", "48", "84", "37", "73"], "score": -20},
             "五鬼(凶)": {"pairs": ["18", "81", "79", "97", "36", "63", "24", "42"], "score": -20},
             "六煞(凶)": {"pairs": ["16", "61", "47", "74", "38", "83", "29", "92"], "score": -15},
@@ -67,53 +62,35 @@ class DigitalIChingPro:
         }
 
     def convert_to_nums(self, text):
-        converted = ""
-        for char in text.upper():
-            if char.isdigit(): converted += char
-            elif char.isalpha(): converted += f"{ord(char) - ord('A') + 1:02d}"
-        return converted
+        return "".join(re.findall(r'\d+', text))
 
     def analyze(self, nums):
         results, total_score, i = [], 60, 0
-        counts = {"Wealth": 0, "Noble": 0, "Career": 0}
-        if len(nums) < 2: return results, total_score, counts
+        if len(nums) < 2: return results, total_score
         while i < len(nums) - 1:
-            current = nums[i]
-            if current in '05': i += 1; continue
-            next_idx = i + 1
-            has_zero, has_five = False, False
-            while next_idx < len(nums) and nums[next_idx] in '05':
-                if nums[next_idx] == '0': has_zero = True
-                if nums[next_idx] == '5': has_five = True
-                next_idx += 1
-            if next_idx < len(nums):
-                pair = current + nums[next_idx]
-                star_name, base_score = self.get_star_info(pair)
-                if "天醫" in star_name: counts["Wealth"] += 1
-                if "生氣" in star_name: counts["Noble"] += 1
-                if "延年" in star_name: counts["Career"] += 1
-                final_score = base_score * (1.2 if has_five else 1.0) * (0.5 if has_zero else 1.0)
-                total_score += final_score
-                results.append({"區段": nums[i:next_idx+1], "星號": star_name, "分數": round(final_score, 1)})
+            pair = nums[i:i+2]
+            star_name = "平穩磁場"; star_score = 0
+            for name, info in self.star_config.items():
+                if pair in info["pairs"]: star_name = name; star_score = info["score"]; break
+            total_score += star_score
+            results.append({"區段": pair, "星號": star_name, "分數": star_score})
             i += 1
-        return results, max(0, min(100, round(total_score, 1))), counts
+        return results, max(0, min(100, total_score))
 
-    def get_star_info(self, pair):
-        for name, info in self.star_config.items():
-            if pair in info["pairs"]: return name, info["score"]
-        return "平穩磁場", 0
+    def generate_dynamic_remedy(self, original_nums):
+        # 移除固定種子，確保每次化解碼都不同
+        target_len = 8
+        pool = ["13", "31", "68", "86", "41", "14", "19", "91"]
+        remedy_code = "".join(random.choices(pool, k=4))
+        remedy_details, _ = self.analyze(remedy_code)
+        
+        # 拼接長篇專業解說
+        explanation = f"{random.choice(REASONS)}\n\n{random.choice(DIETS)}\n\n{random.choice(ADVICES)}"
+        
+        # 回傳 4 個變數，徹底解決 ValueError
+        return remedy_code, round(97.0 + random.random()*2, 1), remedy_details, explanation
 
-    def generate_remedy(self, original_nums, star_counts):
-        # 這是為了修復截圖中的 ValueError，確保回傳變數正確
-        target_len = max(8, len(original_nums))
-        if target_len > 12: target_len = 12
-        pool = ["13", "31", "68", "86", "49", "94", "19", "91", "14", "41"]
-        remedy_code = "".join(random.choices(pool, k=target_len//2))[:target_len]
-        remedy_details, _, _ = self.analyze(remedy_code)
-        explanation = "根據當下磁場感應，此數字能有效中和原本的負面震盪，建議配合清淡飲食..."
-        return remedy_code, 98.5, remedy_details, explanation
-
-# --- 3. 專業介面實作 ---
+# --- 4. 介面呈現 ---
 if "paid_history" not in st.session_state:
     st.session_state.paid_history = {}
 
@@ -121,19 +98,16 @@ st.sidebar.header("📝 鑑定資料填寫")
 selected_type = st.sidebar.selectbox("選擇類型", ["手機號碼", "車牌號碼", "出生日期", "LINE ID"])
 raw_input = st.sidebar.text_input("請輸入欲鑑定之號碼：", placeholder="例如：0912345678")
 
-# 管理者區塊：將標題設為空字串，且不顯示說明文字，隱藏得更深
-admin_key = st.sidebar.text_input("", type="password", placeholder="---")
-
-ADMIN_PASSWORDS = ["master888", "admin999"] 
+# 完全移除管理者欄位與按鈕，讓介面乾淨無暇
 
 st.title("🔮 數位易經能量鑑定所")
 
 if raw_input:
     engine = DigitalIChingPro()
     clean_nums = engine.convert_to_nums(raw_input)
-    details, score, star_counts = engine.analyze(clean_nums)
+    details, score = engine.analyze(clean_nums)
     
-    # 檢查是否已支付 (15分鐘邏輯)
+    # 支付檢查
     is_paid = False
     if raw_input in st.session_state.paid_history:
         if datetime.now() - st.session_state.paid_history[raw_input] < timedelta(minutes=15):
@@ -146,18 +120,20 @@ if raw_input:
         
         st.divider()
         st.subheader("🛠️ 專屬能量調和方案")
-        # 修正：確保接收 4 個變數
-        r_code, r_score, r_details, r_expl = engine.generate_remedy(clean_nums, star_counts)
+        # 修正變數接收，避免報錯
+        r_code, r_score, r_details, r_expl = engine.generate_dynamic_remedy(clean_nums)
+        
+        st.markdown("### **【大師親批：為何需要此化解？】**")
         st.write(r_expl)
-        st.info(f"建議開運碼：{r_code} (預期能級：{r_score})")
+        
+        st.info(f"✨ 建議開運化解碼：**{r_code}** (預期能級：{r_score}分)")
+        st.table(pd.DataFrame(r_details))
+        
+        if st.sidebar.button("🔄 刷新當下能量感應"):
+            st.rerun()
     else:
         st.warning("🔒 鑑定報告已被封印")
+        st.info(f"📍 **{selected_type}：{raw_input}** 的數據已演算完畢，請解鎖查閱詳細大師報告。")
         st.link_button("💳 支付 1 USD 解鎖鑑定與化解方案", "https://paypal.me/yourlink")
-        
-        # 只有輸入正確密鑰才會顯示這個小按鈕
-        if admin_key in ADMIN_PASSWORDS:
-            if st.sidebar.button("管理者解鎖"):
-                st.session_state.paid_history[raw_input] = datetime.now()
-                st.rerun()
 else:
-    st.info("👈 請於左側選單輸入您的號碼。")
+    st.info("👈 請於左側選單輸入您的號碼，開啟命運之門。")
